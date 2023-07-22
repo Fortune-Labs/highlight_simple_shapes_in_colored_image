@@ -1,42 +1,69 @@
-% Function to highlight simple shapes of a given color in an image
-function highlightShapesOfColor(imagePath, targetColor)
+function highlight_and_label_colored_objects(image_path, target_color, save_path, min_area, max_area, min_saturation, min_value)
+    % Read the input image
+    original_image = imread(image_path);
+    
+    % Convert the image from RGB to HSV color space
+    hsv_image = rgb2hsv(original_image);
+    
+    % Convert the target color from RGB to HSV format
+    target_color_rgb = target_color;
+    target_color_hsv = rgb2hsv(reshape(target_color_rgb, 1, 1, 3));
+    
+    % Define the hue range for detecting the target color
+    hue_tolerance = 0.15; % Adjust this value to control the sensitivity to the target color
+    lower_bound = [target_color_hsv(1) - hue_tolerance, min_saturation/255, min_value/255];
+    upper_bound = [target_color_hsv(1) + hue_tolerance, 1, 1];
+    
+    % Threshold the image based on the hue, saturation, and value range to isolate the pixels of the given color
+    color_mask = (hsv_image(:,:,1) >= lower_bound(1)) & (hsv_image(:,:,1) <= upper_bound(1)) & ...
+                 (hsv_image(:,:,2) >= lower_bound(2)) & (hsv_image(:,:,3) >= lower_bound(3));
+    
+    % Find connected components in the thresholded image
+    labeled_image = bwlabel(color_mask);
+    
+    % Get region properties for connected components
+    props = regionprops(labeled_image, 'Area', 'BoundingBox', 'Centroid');
+    
+    % Highlight and label colored objects with the target color
+    highlighted_image = original_image;
+    for i = 1:numel(props)
+        % Filter out small and large objects based on area
+        if props(i).Area < min_area || props(i).Area > max_area
+            continue;
+        end
+        
+        % Draw a rectangle around the object
+        bounding_box = props(i).BoundingBox;
+        highlighted_image = insertShape(highlighted_image, 'Rectangle', bounding_box, 'LineWidth', 2, 'Color', [0, 0, 255]);
+        
+        % Label the object with the target color name
+        color_name = get_color_name(target_color_rgb);
+        position = [bounding_box(1), bounding_box(2) - 10];
+        highlighted_image = insertText(highlighted_image, position, color_name, 'FontSize', 12, 'TextColor', 'red', 'BoxOpacity', 0);
+    end
 
-    % Step 1: Read the input image
-    originalImage = imread(imagePath);
-    imshow(originalImage);
-    title('Original Image');
-    drawnow;
-    
-    % Step 2: Convert the image from RGB to HSV color space
-    hsvImage = rgb2hsv(originalImage);
-    
-    % Step 3: Threshold the image based on the hue value to isolate the pixels of the given color
-    targetHue = rgb2hsv(uint8([targetColor(1), targetColor(2), targetColor(3)]));
-    hueTolerance = 0.05; % Adjust this value to control the sensitivity to the target color
-    hueMask = (abs(hsvImage(:, :, 1) - targetHue(1)) < hueTolerance);
-    
-    % Step 4: Perform shape detection on the thresholded image
-    binaryImage = hueMask; % For simplicity, we directly use the hue mask as the binary image
-    binaryImage = imfill(binaryImage, 'holes'); % Fill any holes in the shapes
-    
-    % Step 5: Highlight the detected shapes in the original image
-    highlightedImage = originalImage;
-    highlightedImage(repmat(~binaryImage, [1, 1, 3])) = 0; % Set non-shape pixels to black
-    
-    % Display the result
-    figure;
-    subplot(1, 2, 1);
-    imshow(originalImage);
-    title('Original Image');
-    subplot(1, 2, 2);
-    imshow(highlightedImage);
-    title('Highlighted Shapes');
-    
+    % Save the result
+    imwrite(highlighted_image, save_path);
 end
 
+function color_name = get_color_name(target_color_rgb)
+    color_names = containers.Map({[255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0]}, ...
+                                 {'Red', 'Green', 'Blue', 'Yellow'});
+    color_name = color_names(mat2str(target_color_rgb));
+    if isempty(color_name)
+        color_name = 'Unknown';
+    end
+end
 
-% Example usage
-imagePath = 'path/to/your/image.jpg'; % Replace with the actual image path
-targetColor = [255, 0, 0]; % Red color (adjust the RGB values for other colors)
+% Example usage for multiple images
+input_folder = "D:\Others\Fabius\matlab\Shapes\highlight_simple_shapes_in_colored_image\images" # Replace with the folder path containing input images
+output_folder = "D:\Others\Fabius\matlab\Shapes\highlight_simple_shapes_in_colored_image\output_image" # Replace with the folder path to save highlighted images
+target_color = [0, 0, 255];  % Red color in RGB format (adjust the values for other colors)
 
-highlightShapesOfColor(imagePath, targetColor);
+% Loop through each image in the input folder
+image_files = dir(fullfile(input_folder, '*.jpg'));
+for i = 1:length(image_files)
+    input_image_path = fullfile(input_folder, image_files(i).name);
+    output_image_path = fullfile(output_folder, ['highlighted_', image_files(i).name]);
+    highlight_and_label_colored_objects(input_image_path, target_color, output_image_path, 200, 5000, 100, 100);
+end

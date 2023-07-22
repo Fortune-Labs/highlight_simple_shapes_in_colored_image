@@ -63,7 +63,7 @@ def get_color_name(target_color):
     }
     return color_names.get(target_color, "Unknown")
 
-# usage for multiple images
+# Example usage for multiple images
 input_folder = "D:\Others\Fabius\matlab\Shapes\highlight_simple_shapes_in_colored_image\images" # Replace with the folder path containing input images
 output_folder = "D:\Others\Fabius\matlab\Shapes\highlight_simple_shapes_in_colored_image\output_image" # Replace with the folder path to save highlighted images
 target_color = (0, 0, 255)  # Red color in RGB format (adjust the values for other colors)
