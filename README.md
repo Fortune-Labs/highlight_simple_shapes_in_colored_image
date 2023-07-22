@@ -5,4 +5,4 @@ multiple images. For example, your solution should be able to select all the
 red objects in a given image which consists of other objects
 
 
-dgfjfgfg
+dg
